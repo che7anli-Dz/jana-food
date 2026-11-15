@@ -232,7 +232,7 @@
   </div>
 
   <div class="cta">
-    <a class="btn btn-wa" id="waBarBtn" href="https://wa.me/213662993465?text=Bonjour%20Jana%20Food%2C%20je%20souhaite%20commander.">💬 <span data-fr="Commander sur WhatsApp" data-ar="اطلب عبر واتساب">Commander sur WhatsApp</span></a>
+    <a class="btn btn-wa" id="waBarBtn" href="https://wa.me/213662993465?text=%D8%B3%D9%84%D8%A7%D9%85%20Jana%20Food%D8%8C%20%D8%AD%D8%A7%D8%A8%20%D9%86%D8%B7%D9%84%D8%A8%3A">💬 <span data-fr="Commander sur WhatsApp" data-ar="اطلب عبر واتساب">Commander sur WhatsApp</span></a>
     <a class="btn btn-ig" href="https://www.tiktok.com/@user7495835303983"><span data-fr="TikTok" data-ar="تيك توك">TikTok</span></a>
   </div>
 
@@ -289,6 +289,7 @@ function setLang(l){
   try{ localStorage.setItem('jana_lang', l); }catch(e){}
 }
 document.getElementById('langBtn').addEventListener('click', function(){
+  if(window.ownerMode){ setLang('ar'); return; }
   setLang(document.documentElement.lang === 'ar' ? 'fr' : 'ar');
 });
 try{
@@ -486,20 +487,20 @@ function waLink(){
     var q = cart[k];
     if(d.price != null){
       total += d.price * q;
-      lines.push("• " + q + "× " + dishName(d) + " — " + fmt(d.price * q) + (isAr() ? " دج" : " DA"));
+      lines.push("• " + q + "× " + (d.ar || d.fr) + " — " + fmt(d.price * q) + " دج");
     } else {
       hasUnpriced = true;
-      lines.push("• " + q + "× " + dishName(d) + " — " + (isAr() ? "عند الطلب" : "Sur demande"));
+      lines.push("• " + q + "× " + (d.ar || d.fr) + " — " + "عند الطلب");
     }
   }
-  var head = isAr() ? "سلام Jana Food، حاب نطلب:" : "Bonjour Jana Food, je souhaite commander :";
-  var tot = (isAr() ? "المجموع: " : "Total : ") + fmt(total) + (isAr() ? " دج" : " DA") + (hasUnpriced ? (isAr() ? " (+ أطباق عند الطلب)" : " (+ plats sur demande)") : "");
+  var head = "سلام Jana Food، حاب نطلب:";
+  var tot = "المجموع: " + fmt(total) + " دج" + (hasUnpriced ? " (+ أطباق عند الطلب)" : "");
   var msg = head + "\n" + lines.join("\n") + "\n" + tot;
   return "https://wa.me/" + WA_NUMBER + "?text=" + encodeURIComponent(msg);
 }
 
 function waGeneric(){
-  return "https://wa.me/" + WA_NUMBER + "?text=" + encodeURIComponent(isAr() ? "سلام Jana Food، حاب نطلب:" : "Bonjour Jana Food, je souhaite commander :");
+  return "https://wa.me/" + WA_NUMBER + "?text=" + encodeURIComponent("سلام Jana Food، حاب نطلب:");
 }
 function syncWaButtons(){
   var link = cartCount() ? waLink() : waGeneric();
@@ -584,7 +585,7 @@ function saveDish(){
   var p = pr === "" ? null : parseInt(pr, 10);
   if(p != null && (isNaN(p) || p < 0)) p = null;
   var sb = window.janaSb;
-  if(!sb){ toast("Supabase indisponible — vérifie ta connexion"); return; }
+  if(!sb){ toast(isAr() ? "Supabase ماشي متوفر — تحقق من الاتصال" : "Supabase indisponible — vérifie ta connexion"); return; }
   var go = function(finalCat){
     var sort = 0, old = null;
     for(var i = 0; i < DISHES.length; i++){ if(DISHES[i].cat === finalCat && (DISHES[i].sort || 0) > sort) sort = DISHES[i].sort || 0; if(DISHES[i].id === id) old = DISHES[i]; }
@@ -595,7 +596,7 @@ function saveDish(){
       var row = {id: rowId, cat:finalCat, fr: fr || ar, ar: ar || fr, ingredients:desc, price:p, img: imgUrl, sort:sort, active: document.getElementById("addActive").checked};
       var cr = ownerCreds() || {};
       sb.rpc("jana_upsert_dish", {p_project: cr.project, p_code: cr.code, p_dish: row}).then(function(res){
-        if(res.error){ toast("Erreur : " + res.error.message); return; }
+        if(res.error){ toast((isAr() ? "خطأ: " : "Erreur : ") + res.error.message); return; }
         closeOvls(); window.janaReload();
         toast(isAr() ? "الطبق تسجّل ✅ — تبدل عند الزبائن أوتوماتيك" : "Plat enregistré ✅ — le menu client se met à jour tout seul");
       });
@@ -605,7 +606,7 @@ function saveDish(){
       var path = rowId + "/" + Date.now() + ".jpg";
       resizePhoto(file, function(blob){
         sb.storage.from("jana-photos").upload(path, blob, {contentType:"image/jpeg"}).then(function(res){
-          if(res.error){ toast("Photo : " + res.error.message); finish(document.getElementById("addPhotoPrev").getAttribute("data-url") || ""); return; }
+          if(res.error){ toast((isAr() ? "التصويرة: " : "Photo : ") + res.error.message); finish(document.getElementById("addPhotoPrev").getAttribute("data-url") || ""); return; }
           finish(sb.storage.from("jana-photos").getPublicUrl(path).data.publicUrl);
         });
       });
@@ -618,7 +619,7 @@ function saveDish(){
     var newId = catFr.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || ("cat-" + Date.now());
     var cr = ownerCreds() || {};
     sb.rpc("jana_upsert_cat", {p_project: cr.project, p_code: cr.code, p_cat: {id:newId, fr:catFr, ar:catAr, sort:CATS.length+1}}).then(function(res){
-      if(res.error){ toast("Erreur : " + res.error.message); return; }
+      if(res.error){ toast((isAr() ? "خطأ: " : "Erreur : ") + res.error.message); return; }
       CATS.push({id:newId, fr:catFr, ar:catAr});
       go(newId);
     });
@@ -632,7 +633,7 @@ function deleteDish(id){
   if(!sb) return;
   var cr = ownerCreds() || {};
   sb.rpc("jana_delete_dish", {p_project: cr.project, p_code: cr.code, p_id: id}).then(function(res){
-    if(res.error){ toast("Erreur : " + res.error.message); return; }
+    if(res.error){ toast((isAr() ? "خطأ: " : "Erreur : ") + res.error.message); return; }
     if(cart[id]){ delete cart[id]; lsSet("jana_cart_v1", cart); }
     window.janaReload();
     toast(isAr() ? "الطبق تمسح" : "Plat supprimé");
@@ -719,6 +720,8 @@ document.querySelector(".hero .logo").addEventListener("click", function(){
       ownerMode = false;
       document.getElementById("ownerBar").style.display = "none";
       document.body.style.paddingTop = "0";
+      setLang(ownerLangBefore || "fr");
+      ownerLangBefore = null;
       renderMenu();
       toast(isAr() ? "وضع المالك مطفي" : "Mode propriétaire désactivé");
       return;
@@ -804,10 +807,10 @@ renderCartBar();
     <button type="button" class="btn-gold" id="ownLogin"><span data-fr="Entrer" data-ar="دخول">Entrer</span></button>
   </div>
 </div></div>
-<div id="ownerBar" style="display:none"><span>👑 <span id="ownerWho"></span></span><span><button type="button" id="ownSettings">⚙️ Paramètres</button> <button type="button" id="ownLogout">Sortie</button></span></div>
+<div id="ownerBar" style="display:none"><span>👑 <span id="ownerWho"></span></span><span><button type="button" id="ownSettings"><span data-fr="⚙️ Paramètres" data-ar="⚙️ الإعدادات">⚙️ Paramètres</span></button> <button type="button" id="ownLogout"><span data-fr="Sortie" data-ar="خروج">Sortie</span></button></span></div>
 <div class="ovl" id="setOvl"><div class="sheet">
   <button type="button" class="x" data-close>×</button>
-  <h3 class="popname">⚙️ Paramètres de la boutique</h3>
+  <h3 class="popname"><span data-fr="⚙️ Paramètres de la boutique" data-ar="⚙️ إعدادات المحل">⚙️ Paramètres de la boutique</span></h3>
   <div style="margin-top:14px">
     <div class="fld"><label><span data-fr="Nom de la boutique" data-ar="اسم المحل">Nom de la boutique</span></label><input id="setName" type="text"></div>
     <div class="fld"><label>TikTok</label><input id="setIg" type="text" placeholder="user7495835303983"></div>
@@ -819,6 +822,11 @@ renderCartBar();
 <script>
 /* owner mode, inside this same page: 4 taps on the logo, code asked once then remembered */
 var OWNER_PROJECT = "jana";
+/* owner mode is ALWAYS Arabic (owner request 2026-11-15): unlock() remembers the
+   customer language, forces 'ar', and exit restores it. setLang('ar') also writes
+   'ar' to localStorage, so unlock() puts the remembered language back right away
+   so the customer's saved language is never clobbered. */
+var ownerLangBefore = null;
 function ownerCreds(){ try{ return JSON.parse(localStorage.getItem("jana_owner_login") || "null"); }catch(e){ return null; } }
 function resizePhoto(file, cb){
   var img = new Image();
@@ -832,13 +840,20 @@ function resizePhoto(file, cb){
   img.onerror = function(){ cb(file); };
   img.src = URL.createObjectURL(file);
 }
-function openCodePrompt(){ document.getElementById("codeOvl").classList.add("open"); }
+function openCodePrompt(){
+  if(!ownerMode && ownerLangBefore === null){ ownerLangBefore = document.documentElement.lang; }
+  setLang('ar');
+  document.getElementById("codeOvl").classList.add("open");
+}
 function unlock(project){
   closeOvls();
+  if(ownerLangBefore === null){ ownerLangBefore = document.documentElement.lang; }
   ownerMode = true;
   document.getElementById("ownerBar").style.display = "flex";
   document.getElementById("ownerWho").textContent = project;
   document.body.style.paddingTop = "40px";
+  setLang('ar');
+  try{ localStorage.setItem('jana_lang', ownerLangBefore || 'fr'); }catch(e){}
   renderMenu();
   toast(isAr() ? "مرحباً — تقدر تعدل المنيو دروك" : "Bienvenue — tu peux modifier le menu");
 }
@@ -846,15 +861,24 @@ function showErr(msg){ var e = document.getElementById("ownErr"); e.style.displa
 document.getElementById("ownLogin").addEventListener("click", function(){
   var code = document.getElementById("ownCode").value;
   var sb = window.janaSb;
-  if(!code){ showErr("Écris le code."); return; }
-  if(!sb){ showErr("Supabase indisponible — vérifie ta connexion et recharge la page."); return; }
+  if(!code){ showErr(isAr() ? "اكتب الكود." : "Écris le code."); return; }
+  if(!sb){ showErr(isAr() ? "Supabase ماشي متوفر — تحقق من الاتصال وعاود حمّل الصفحة." : "Supabase indisponible — vérifie ta connexion et recharge la page."); return; }
   sb.rpc("jana_check_code", {p_project: OWNER_PROJECT, p_code: code}).then(function(res){
     if(res.error){ showErr(res.error.message); return; }
     if(res.data === true){ localStorage.setItem("jana_owner_login", JSON.stringify({project: OWNER_PROJECT, code: code})); unlock(OWNER_PROJECT); }
     else showErr(isAr() ? "الكود غالط — عاود جرّب" : "Code incorrect — réessaie.");
   });
 });
-document.getElementById("ownLogout").addEventListener("click", function(){ localStorage.removeItem("jana_owner_login"); location.reload(); });
+document.getElementById("ownLogout").addEventListener("click", function(){ localStorage.removeItem("jana_owner_login"); try{ localStorage.setItem("jana_lang", ownerLangBefore || "fr"); }catch(e){} location.reload(); });
+/* closing the code prompt without logging in puts the customer language back */
+document.getElementById("codeOvl").addEventListener("click", function(e){
+  if(ownerMode) return;
+  if(e.target === this || (e.target.closest && e.target.closest("[data-close]"))){
+    setTimeout(function(){
+      if(!ownerMode && !document.getElementById("codeOvl").classList.contains("open") && ownerLangBefore){ setLang(ownerLangBefore); ownerLangBefore = null; }
+    }, 0);
+  }
+});
 document.getElementById("ownSettings").addEventListener("click", function(){
   var s = window.janaSettings || {};
   document.getElementById("setName").value = s.shop_name || "JANA FOOD";
@@ -871,7 +895,7 @@ document.getElementById("setSave").addEventListener("click", function(){
     rules_fr: document.getElementById("setRulesFr").value, rules_ar: document.getElementById("setRulesAr").value};
   var cr = ownerCreds() || {};
   sb.rpc("jana_upsert_settings", {p_project: cr.project, p_code: cr.code, p_settings: row}).then(function(res){
-    if(res.error){ toast("Erreur : " + res.error.message); return; }
+    if(res.error){ toast((isAr() ? "خطأ: " : "Erreur : ") + res.error.message); return; }
     closeOvls(); window.janaReload();
     toast(isAr() ? "الإعدادات تسجّلت ✅" : "Paramètres enregistrés ✅");
   });
